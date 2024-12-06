@@ -9,8 +9,8 @@ func CreateClient() api.API {
 	apiConfig := &api.Config{
 		APIHost:  "http://localhost:8080",
 		Key:      "12345678",
-		NodeID:   3,
-		NodeType: "Vless",
+		NodeID:   1,
+		NodeType: "vmess",
 	}
 	client := New(apiConfig)
 	return client
@@ -22,5 +22,5 @@ func TestGetV2rayNodeInfo(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(nodeInfo.REALITYConfig)
+	t.Log(nodeInfo)
 }
