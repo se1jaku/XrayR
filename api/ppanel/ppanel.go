@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/XrayR-project/XrayR/api"
@@ -41,7 +42,7 @@ func New(apiConfig *api.Config) *APIClient {
 	// Create Key for each requests
 	client.SetQueryParams(map[string]string{
 		"server_id":  strconv.Itoa(apiConfig.NodeID),
-		"protocol":   apiConfig.NodeType,
+		"protocol":   strings.ToLower(apiConfig.NodeType),
 		"secret_key": apiConfig.Key,
 	})
 	return &APIClient{
@@ -325,7 +326,7 @@ func (c *APIClient) ReportNodeStatus(nodeStatus *api.NodeStatus) (err error) {
 		Cpu:       nodeStatus.CPU,
 		Mem:       nodeStatus.Mem,
 		Disk:      nodeStatus.Disk,
-		UpdatedAt: int64(nodeStatus.Uptime),
+		UpdatedAt: time.Now().Unix(),
 	}
 	if _, err = c.client.R().SetBody(status).ForceContentType("application/json").Post(path); err != nil {
 		return fmt.Errorf("request %s failed: %v", c.assembleURL(path), err.Error())
