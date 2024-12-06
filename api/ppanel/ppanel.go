@@ -357,7 +357,8 @@ func (c *APIClient) ReportUserTraffic(userTraffic *[]api.UserTraffic) (err error
 }
 
 func (c *APIClient) GetNodeRule() (ruleList *[]api.DetectRule, err error) {
-	return nil, nil
+	list := make([]api.DetectRule, 0)
+	return &list, nil
 }
 
 func (c *APIClient) ReportIllegal(detectResultList *[]api.DetectResult) (err error) {
