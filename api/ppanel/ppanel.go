@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/XrayR-project/XrayR/api"
 	"github.com/bitly/go-simplejson"
 	"github.com/go-resty/resty/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 type APIClient struct {
@@ -80,6 +80,7 @@ func (c *APIClient) GetNodeInfo() (nodeInfo *api.NodeInfo, err error) {
 	if resp.StatusCode() == 304 {
 		return nil, errors.New(api.NodeNotModified)
 	}
+
 	// parse Protocol
 	switch config.Protocol {
 	case "Shadowsocks":
@@ -102,7 +103,7 @@ func (c *APIClient) parseShadowsocksConfig(config *ShadowsocksProtocol) (*api.No
 		return nil, fmt.Errorf("shadowsocks config is nil,server id: %v，invalid response: %v", c.ServerID, config)
 	}
 	return &api.NodeInfo{
-		NodeType:          "shadowsocks",
+		NodeType:          "Shadowsocks",
 		TransportProtocol: "tcp",
 		NodeID:            c.ServerID,
 		Port:              uint32(config.Port),
@@ -121,9 +122,11 @@ func (c *APIClient) parseVlessConfig(config *VlessProtocol) (*api.NodeInfo, erro
 		enableReality  bool
 		dest           string
 	)
+
 	if config == nil {
 		return nil, fmt.Errorf("vmess config is nil,server id: %v，invalid response: %v", c.ServerID, config)
 	}
+
 	if config.Transport != "" {
 		err := json.Unmarshal([]byte(config.Transport), &transport)
 		if err != nil {

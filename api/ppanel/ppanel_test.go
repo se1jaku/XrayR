@@ -24,3 +24,18 @@ func TestGetV2rayNodeInfo(t *testing.T) {
 	}
 	t.Log(nodeInfo)
 }
+
+func TestShadowsocks(t *testing.T) {
+	apiConfig := &api.Config{
+		APIHost:  "http://localhost:8080",
+		Key:      "12345678",
+		NodeID:   5,
+		NodeType: "Shadowsocks",
+	}
+	client := New(apiConfig)
+	nodeInfo, err := client.GetNodeInfo()
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(nodeInfo)
+}
