@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
     paths:
       - "**/*.go"
       - "go.mod"
@@ -72,7 +72,7 @@ jobs:
             goarch: mips
           # END MIPS
           # BEGIN PPC
-          # - goos: linux # Removed due to the unsupport of shirou/gopsutil 
+          # - goos: linux # Removed due to the unsupport of shirou/gopsutil
           #   goarch: ppc64
           - goos: linux
             goarch: ppc64le
@@ -185,7 +185,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         if: github.event_name == 'release'
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.GH_TOKEN }}
           file: ./XrayR-${{ steps.get_filename.outputs.ASSET_NAME }}.zip*
           tag: ${{ github.ref }}
           file_glob: true
