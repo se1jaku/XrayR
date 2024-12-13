@@ -255,7 +255,7 @@ func (c *APIClient) ReportNodeStatus(nodeStatus *api.NodeStatus) (err error) {
 		Cpu:       nodeStatus.CPU,
 		Mem:       nodeStatus.Mem,
 		Disk:      nodeStatus.Disk,
-		UpdatedAt: time.Now().Unix(),
+		UpdatedAt: time.Now().UnixMilli(),
 	}
 	if _, err = c.client.R().SetBody(status).ForceContentType("application/json").Post(path); err != nil {
 		return fmt.Errorf("request %s failed: %v", c.assembleURL(path), err.Error())
@@ -264,6 +264,17 @@ func (c *APIClient) ReportNodeStatus(nodeStatus *api.NodeStatus) (err error) {
 }
 
 func (c *APIClient) ReportNodeOnlineUsers(onlineUser *[]api.OnlineUser) (err error) {
+	path := "/v1/server/online"
+	users := make([]OnlineUser, 0)
+	for _, u := range *onlineUser {
+		users = append(users, OnlineUser{
+			UID: int64(u.UID),
+			IP:  u.IP,
+		})
+	}
+	if _, err = c.client.R().SetBody(users).ForceContentType("application/json").Post(path); err != nil {
+		return fmt.Errorf("request %s failed: %v", c.assembleURL(path), err.Error())
+	}
 	return nil
 }
 
