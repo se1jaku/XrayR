@@ -89,4 +89,11 @@ type (
 		Upload   int64 `json:"upload"`
 		Download int64 `json:"download"`
 	}
+	OnlineUser struct {
+		UID int64  `json:"uid"`
+		IP  string `json:"ip"`
+	}
+	OnlineUsersRequest struct {
+		Users []OnlineUser `json:"users"`
+	}
 )
