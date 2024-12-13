@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/XrayR-project/XrayR/api"
-	"github.com/bitly/go-simplejson"
 	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 )
@@ -80,17 +79,40 @@ func (c *APIClient) GetNodeInfo() (nodeInfo *api.NodeInfo, err error) {
 	if resp.StatusCode() == 304 {
 		return nil, errors.New(api.NodeNotModified)
 	}
-
+	var b []byte
+	if b, err = config.Config.MarshalJSON(); err != nil {
+		return nil, err
+	}
 	// parse Protocol
 	switch config.Protocol {
-	case "Shadowsocks":
-		return c.parseShadowsocksConfig(config.Shadowsocks)
-	case "Vless":
-		return c.parseVlessConfig(config.Vless)
-	case "Vmess":
-		return c.parseVmessConfig(config.Vmess)
-	case "Trojan":
-		return c.parseTrojanConfig(config.Trojan)
+	case "shadowsocks":
+
+		var shadowsocksConfig Shadowsocks
+		if err := json.Unmarshal(b, &shadowsocksConfig); err != nil {
+			return nil, err
+		}
+		return c.parseShadowsocksConfig(&shadowsocksConfig)
+	case "vless":
+
+		var vlessConfig Vless
+		if err := json.Unmarshal(b, &vlessConfig); err != nil {
+			return nil, err
+		}
+
+		return c.parseVlessConfig(&vlessConfig)
+	case "vmess":
+		var vmessConfig Vmess
+		if err := json.Unmarshal(b, &vmessConfig); err != nil {
+
+			return nil, err
+		}
+		return c.parseVmessConfig(&vmessConfig)
+	case "trojan":
+		var trojanConfig Trojan
+		if err := json.Unmarshal(b, &trojanConfig); err != nil {
+			return nil, err
+		}
+		return c.parseTrojanConfig(&trojanConfig)
 	default:
 		msg := fmt.Sprintf("invalid protocol: %v", config.Protocol)
 		return nil, errors.New(msg)
@@ -98,7 +120,7 @@ func (c *APIClient) GetNodeInfo() (nodeInfo *api.NodeInfo, err error) {
 }
 
 // parse shadowsocks config
-func (c *APIClient) parseShadowsocksConfig(config *ShadowsocksProtocol) (*api.NodeInfo, error) {
+func (c *APIClient) parseShadowsocksConfig(config *Shadowsocks) (*api.NodeInfo, error) {
 	if config == nil {
 		return nil, fmt.Errorf("shadowsocks config is nil,server id: %v，invalid response: %v", c.ServerID, config)
 	}
@@ -112,47 +134,30 @@ func (c *APIClient) parseShadowsocksConfig(config *ShadowsocksProtocol) (*api.No
 }
 
 // parse vless config
-func (c *APIClient) parseVlessConfig(config *VlessProtocol) (*api.NodeInfo, error) {
+func (c *APIClient) parseVlessConfig(config *Vless) (*api.NodeInfo, error) {
 	var (
-		host           string
-		header         json.RawMessage
-		transport      Transport
-		securityConfig SecurityConfig
-		enableTLS      bool
-		enableReality  bool
-		dest           string
+		header        json.RawMessage
+		enableTLS     bool
+		enableReality bool
+		dest          string
 	)
 
 	if config == nil {
 		return nil, fmt.Errorf("vmess config is nil,server id: %v，invalid response: %v", c.ServerID, config)
 	}
 
-	if config.Transport != "" {
-		err := json.Unmarshal([]byte(config.Transport), &transport)
-		if err != nil {
-			return nil, fmt.Errorf("parse transport failed: %v", err.Error())
-		}
-	}
-	if config.SecurityConfig != "" {
-		err := json.Unmarshal([]byte(config.SecurityConfig), &securityConfig)
-		if err != nil {
-			return nil, fmt.Errorf("parse security config failed: %v", err.Error())
-		}
-	}
-	if securityConfig.ServerAddress != "" {
-		dest = securityConfig.ServerAddress
-	} else {
-		dest = securityConfig.ServerName
+	if config.SecurityConfig.SNI != "" {
+		dest = config.SecurityConfig.SNI
 	}
 	realityConfig := api.REALITYConfig{
-		Dest:             dest + ":" + strconv.Itoa(int(securityConfig.ServerPort)),
+		Dest:             dest + ":" + strconv.Itoa(config.Port),
 		ProxyProtocolVer: 0,
 		ServerNames: []string{
-			securityConfig.ServerName,
+			config.SecurityConfig.SNI,
 		},
-		PrivateKey: securityConfig.PrivateKey,
+		PrivateKey: config.SecurityConfig.RealityPrivateKey,
 		ShortIds: []string{
-			securityConfig.ShortId,
+			config.SecurityConfig.RealityShortId,
 		},
 	}
 	switch config.Security {
@@ -168,131 +173,52 @@ func (c *APIClient) parseVlessConfig(config *VlessProtocol) (*api.NodeInfo, erro
 		enableTLS = true
 		enableReality = true
 	}
-	switch config.Network {
-	case "tcp":
-		if transport.Header != nil {
-			if httpHeader, err := transport.Header.MarshalJSON(); err != nil {
-				return nil, err
-			} else {
-				header = httpHeader
-			}
-		}
-	case "websocket":
-		if transport.Header != nil {
-			if httpHeader, err := transport.Headers.MarshalJSON(); err != nil {
-				return nil, err
-			} else {
-				b, _ := simplejson.NewJson(httpHeader)
-				host = b.Get("Host").MustString()
-			}
-		} else {
-			return nil, fmt.Errorf("invalid transport config: %v", transport)
-		}
-	case "httpupgrade", "splithttp":
-		if transport.Headers != nil {
-			if httpHeaders, err := transport.Headers.MarshalJSON(); err != nil {
-				return nil, err
-			} else {
-				b, _ := simplejson.NewJson(httpHeaders)
-				host = b.Get("Host").MustString()
-			}
-		}
-		if transport.Host != "" {
-			host = transport.Host
-		}
-	}
-
 	return &api.NodeInfo{
 		NodeID:            c.ServerID,
 		NodeType:          "V2ray",
 		Port:              uint32(config.Port),
-		Host:              host,
-		Path:              transport.Path,
+		Host:              config.TransportConfig.Host,
+		Path:              config.TransportConfig.Path,
 		AlterID:           0,
 		Header:            header,
-		ServiceName:       transport.ServiceName,
-		TransportProtocol: config.Network,
+		ServiceName:       config.TransportConfig.ServiceName,
+		TransportProtocol: config.Transport,
 		EnableTLS:         enableTLS,
 		EnableREALITY:     enableReality,
 		REALITYConfig:     &realityConfig,
-		VlessFlow:         config.XTLS,
+		VlessFlow:         config.Flow,
 	}, nil
 }
 
 // parse vmess config
-func (c *APIClient) parseVmessConfig(config *VmessProtocol) (*api.NodeInfo, error) {
-	var (
-		host      string
-		header    json.RawMessage
-		transport Transport
-	)
+func (c *APIClient) parseVmessConfig(config *Vmess) (*api.NodeInfo, error) {
 	if config == nil {
 		return nil, fmt.Errorf("vmess config is nil,server id: %v，invalid response: %v", c.ServerID, config)
-	}
-	if config.Transport != "" {
-		err := json.Unmarshal([]byte(config.Transport), &transport)
-		if err != nil {
-			return nil, fmt.Errorf("parse transport failed: %v", err.Error())
-		}
-	}
-	switch config.Network {
-	case "tcp":
-		if transport.Header != nil {
-			if httpHeader, err := transport.Header.MarshalJSON(); err != nil {
-				return nil, err
-			} else {
-				header = httpHeader
-			}
-		}
-	case "ws":
-		if transport.Header != nil {
-			if httpHeader, err := transport.Headers.MarshalJSON(); err != nil {
-				return nil, err
-			} else {
-				b, _ := simplejson.NewJson(httpHeader)
-				host = b.Get("Host").MustString()
-			}
-		} else {
-			return nil, fmt.Errorf("invalid transport config: %v", transport)
-		}
-	case "httpupgrade", "splithttp":
-		if transport.Headers != nil {
-			if httpHeaders, err := transport.Headers.MarshalJSON(); err != nil {
-				return nil, err
-			} else {
-				b, _ := simplejson.NewJson(httpHeaders)
-				host = b.Get("Host").MustString()
-			}
-		}
-		if transport.Host != "" {
-			host = transport.Host
-		}
 	}
 
 	return &api.NodeInfo{
 		NodeID:            c.ServerID,
 		NodeType:          "V2ray",
 		Port:              uint32(config.Port),
-		Host:              host,
-		Path:              transport.Path,
+		Host:              config.TransportConfig.Host,
+		Path:              config.TransportConfig.Path,
 		AlterID:           0,
-		Header:            header,
-		ServiceName:       transport.ServiceName,
-		EnableTLS:         *config.EnableTLS,
-		TransportProtocol: config.Network,
+		ServiceName:       config.SecurityConfig.SNI,
+		EnableTLS:         config.Security == "tls",
+		TransportProtocol: config.Transport,
 	}, nil
 }
 
 // parse trojan config
-func (c *APIClient) parseTrojanConfig(config *TrojanProtocol) (*api.NodeInfo, error) {
+func (c *APIClient) parseTrojanConfig(config *Trojan) (*api.NodeInfo, error) {
 	return &api.NodeInfo{
 		NodeID:            c.ServerID,
 		NodeType:          "Trojan",
 		Port:              uint32(config.Port),
 		TransportProtocol: "tcp",
 		EnableTLS:         true,
-		Host:              config.Host,
-		ServiceName:       config.Host,
+		Host:              config.TransportConfig.Host,
+		ServiceName:       config.SecurityConfig.SNI,
 	}, nil
 }
 
@@ -329,7 +255,7 @@ func (c *APIClient) ReportNodeStatus(nodeStatus *api.NodeStatus) (err error) {
 		Cpu:       nodeStatus.CPU,
 		Mem:       nodeStatus.Mem,
 		Disk:      nodeStatus.Disk,
-		UpdatedAt: time.Now().Unix(),
+		UpdatedAt: time.Now().UnixMilli(),
 	}
 	if _, err = c.client.R().SetBody(status).ForceContentType("application/json").Post(path); err != nil {
 		return fmt.Errorf("request %s failed: %v", c.assembleURL(path), err.Error())
@@ -338,6 +264,17 @@ func (c *APIClient) ReportNodeStatus(nodeStatus *api.NodeStatus) (err error) {
 }
 
 func (c *APIClient) ReportNodeOnlineUsers(onlineUser *[]api.OnlineUser) (err error) {
+	path := "/v1/server/online"
+	users := make([]OnlineUser, 0)
+	for _, u := range *onlineUser {
+		users = append(users, OnlineUser{
+			UID: int64(u.UID),
+			IP:  u.IP,
+		})
+	}
+	if _, err = c.client.R().SetBody(users).ForceContentType("application/json").Post(path); err != nil {
+		return fmt.Errorf("request %s failed: %v", c.assembleURL(path), err.Error())
+	}
 	return nil
 }
 

@@ -15,67 +15,56 @@ type (
 	}
 
 	GetServerConfigResponse struct {
-		Basic       ServerBasic          `json:"basic"`
-		Protocol    string               `json:"protocol"`
-		Vmess       *VmessProtocol       `json:"vmess,omitempty"`
-		Vless       *VlessProtocol       `json:"vless,omitempty"`
-		Trojan      *TrojanProtocol      `json:"trojan,omitempty"`
-		Shadowsocks *ShadowsocksProtocol `json:"shadowsocks,omitempty"`
+		Basic    ServerBasic      `json:"basic"`
+		Protocol string           `json:"protocol"`
+		Config   *json.RawMessage `json:"config"`
 	}
 
-	VmessProtocol struct {
-		Host      string `json:"host"`
+	Vless struct {
+		Port            int             `json:"port"`
+		Flow            string          `json:"flow"`
+		Transport       string          `json:"transport"`
+		TransportConfig TransportConfig `json:"transport_config"`
+		Security        string          `json:"security"`
+		SecurityConfig  SecurityConfig  `json:"security_config"`
+	}
+
+	Vmess struct {
+		Port            int             `json:"port"`
+		Transport       string          `json:"transport"`
+		TransportConfig TransportConfig `json:"transport_config"`
+		Security        string          `json:"security"`
+		SecurityConfig  SecurityConfig  `json:"security_config"`
+	}
+
+	Trojan struct {
+		Port            int             `json:"port"`
+		Transport       string          `json:"transport"`
+		TransportConfig TransportConfig `json:"transportConfig"`
+		Security        string          `json:"security"`
+		SecurityConfig  SecurityConfig  `json:"securityConfig"`
+	}
+
+	Shadowsocks struct {
+		Method    string `json:"method"`
 		Port      int    `json:"port"`
-		EnableTLS *bool  `json:"enable_tls"`
-		TLSConfig string `json:"tls_config"`
-		Network   string `json:"network"`
-		Transport string `json:"transport"`
-	}
-	VlessProtocol struct {
-		Host           string `json:"host"`
-		Port           int    `json:"port"`
-		Network        string `json:"network"`
-		Transport      string `json:"transport"`
-		Security       string `json:"security"`
-		SecurityConfig string `json:"security_config"`
-		XTLS           string `json:"xtls"`
-	}
-	TrojanProtocol struct {
-		Host      string `json:"host"`
-		Port      int    `json:"port"`
-		EnableTLS *bool  `json:"enable_tls"`
-		TLSConfig string `json:"tls_config"`
-		Network   string `json:"network"`
-		Transport string `json:"transport"`
+		ServerKey string `json:"server_key"`
 	}
 
-	ShadowsocksProtocol struct {
-		Port   int    `json:"port"`
-		Method string `json:"method"`
+	TransportConfig struct {
+		Path        string `json:"path"`
+		Host        string `json:"host"`
+		ServiceName string `json:"service_name"`
 	}
 
-	Transport struct {
-		Path        string           `json:"path"`
-		Host        string           `json:"host"`
-		Key         string           `json:"key"`
-		Seed        string           `json:"seed"`
-		Header      *json.RawMessage `json:"header"`
-		Headers     *json.RawMessage `json:"headers"`
-		Response    *json.RawMessage `json:"response"`
-		Security    string           `json:"security"`
-		ServiceName string           `json:"serviceName"`
-	}
 	SecurityConfig struct {
-		ServerAddress string `json:"server_address"`
-		ServerName    string `json:"server_name"`
-		ServerPort    uint32 `json:"server_port"`
-		Fingerprint   string `json:"fingerprint"`
-		PrivateKey    string `json:"private_key"`
-		PublicKey     string `json:"public_key"`
-		ShortId       string `json:"short_id"`
-		AllowInsecure bool   `json:"allow_insecure"`
+		SNI               string `json:"sni"`
+		AllowInsecure     bool   `json:"allow_insecure"`
+		Fingerprint       string `json:"fingerprint"`
+		RealityPrivateKey string `json:"reality_private_key"`
+		RealityPublicKey  string `json:"reality_public_key"`
+		RealityShortId    string `json:"reality_short_id"`
 	}
-
 	GetServerUserListResponse struct {
 		Users []ServerUser `json:"users"`
 	}
@@ -99,5 +88,12 @@ type (
 		UID      int64 `json:"uid"`
 		Upload   int64 `json:"upload"`
 		Download int64 `json:"download"`
+	}
+	OnlineUser struct {
+		UID int64  `json:"uid"`
+		IP  string `json:"ip"`
+	}
+	OnlineUsersRequest struct {
+		Users []OnlineUser `json:"users"`
 	}
 )
