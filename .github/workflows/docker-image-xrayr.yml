@@ -1,6 +1,10 @@
 name: Docker Image CI for xrayr
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The tag version you want to build"
   release:
     types:
       - published
