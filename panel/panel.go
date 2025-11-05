@@ -2,6 +2,7 @@ package panel
 
 import (
 	"encoding/json"
+	"github.com/XrayR-project/XrayR/api/ppanel"
 	"os"
 	"sync"
 
@@ -188,6 +189,8 @@ func (p *Panel) Start() {
 			apiClient = gov2panel.New(nodeConfig.ApiConfig)
 		case "BunPanel":
 			apiClient = bunpanel.New(nodeConfig.ApiConfig)
+		case "PPanel":
+			apiClient = ppanel.New(nodeConfig.ApiConfig)
 		default:
 			log.Panicf("Unsupport panel type: %s", nodeConfig.PanelType)
 		}
@@ -208,7 +211,7 @@ func (p *Panel) Start() {
 	for _, s := range p.Service {
 		err := s.Start()
 		if err != nil {
-			log.Panicf("Panel Start failed: %s", err)
+			log.Panicf("Panel Start failed: %s", err.Error())
 		}
 	}
 	p.Running = true
