@@ -14,6 +14,7 @@ import (
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/infra/conf"
+	"github.com/xtls/xray-core/proxy/shadowsocks_2022"
 
 	"github.com/XrayR-project/XrayR/api"
 	"github.com/XrayR-project/XrayR/common/mylego"
@@ -105,17 +106,29 @@ func InboundBuilder(config *Config, nodeInfo *api.NodeInfo, tag string) (*core.I
 		}
 
 		proxySetting, _ := proxySetting.(*conf.ShadowsocksServerConfig)
-		// shadowsocks must have a random password
-		// shadowsocks2022's password == user PSK, thus should a length of string >= 32 and base64 encoder
-		b := make([]byte, 32)
-		rand.Read(b)
-		randPasswd := hex.EncodeToString(b)
-		if C.Contains(shadowaead_2022.List, cipher) {
+		isSS2022 := C.Contains(shadowaead_2022.List, cipher)
+		keySize := 32
+		if isSS2022 {
+			method, err := shadowsocks_2022.GetCipherMethod(cipher)
+			if err != nil {
+				return nil, err
+			}
+			keySize = method.KeySaltLength
+			if _, err := shadowsocks_2022.ParseKey(nodeInfo.ServerKey, keySize); err != nil {
+				return nil, fmt.Errorf("invalid Shadowsocks 2022 server_key for %s: expected %d key bytes (raw or base64-encoded): %w", cipher, keySize, err)
+			}
+		}
+		// The placeholder user must have the exact key length required by the cipher.
+		b := make([]byte, keySize)
+		if _, err := rand.Read(b); err != nil {
+			return nil, fmt.Errorf("generate Shadowsocks placeholder password: %w", err)
+		}
+		if isSS2022 {
 			proxySetting.Users = append(proxySetting.Users, &conf.ShadowsocksUserConfig{
 				Password: base64.StdEncoding.EncodeToString(b),
 			})
 		} else {
-			proxySetting.Password = randPasswd
+			proxySetting.Password = hex.EncodeToString(b)
 		}
 
 		proxySetting.NetworkList = &conf.NetworkList{"tcp", "udp"}
