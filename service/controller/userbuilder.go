@@ -90,7 +90,7 @@ func (c *Controller) buildSSUser(userInfo *[]api.UserInfo, method string) (users
 				Level: 0,
 				Email: e,
 				Account: serial.ToTypedMessage(&shadowsocks_2022.Account{
-					Key:   userKey,
+					Key: userKey,
 				}),
 			}
 		} else {
@@ -123,7 +123,7 @@ func (c *Controller) buildSSPluginUser(userInfo *[]api.UserInfo) (users []*proto
 				Level: 0,
 				Email: e,
 				Account: serial.ToTypedMessage(&shadowsocks_2022.Account{
-					Key:   userKey,
+					Key: userKey,
 				}),
 			}
 		} else {
@@ -152,8 +152,6 @@ func cipherFromString(c string) shadowsocks.CipherType {
 		return shadowsocks.CipherType_AES_256_GCM
 	case "chacha20-poly1305", "aead_chacha20_poly1305", "chacha20-ietf-poly1305":
 		return shadowsocks.CipherType_CHACHA20_POLY1305
-	case "none", "plain":
-		return shadowsocks.CipherType_NONE
 	default:
 		return shadowsocks.CipherType_UNKNOWN
 	}
@@ -167,13 +165,13 @@ func (c *Controller) checkShadowsocksPassword(password string, method string) (s
 	if strings.Contains(c.panelType, "V2board") {
 		var userKey string
 		if len(password) < 16 {
-			return "", newError("shadowsocks2022 key's length must be greater than 16").AtWarning()
+			return "", newError("shadowsocks2022 key's length must be greater than 16")
 		}
 		if method == "2022-blake3-aes-128-gcm" {
 			userKey = password[:16]
 		} else {
 			if len(password) < 32 {
-				return "", newError("shadowsocks2022 key's length must be greater than 32").AtWarning()
+				return "", newError("shadowsocks2022 key's length must be greater than 32")
 			}
 			userKey = password[:32]
 		}

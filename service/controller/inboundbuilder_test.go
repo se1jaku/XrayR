@@ -69,6 +69,7 @@ func TestBuildTrojan(t *testing.T) {
 func TestBuildSS(t *testing.T) {
 	nodeInfo := &api.NodeInfo{
 		NodeType:          "Shadowsocks",
+		CypherMethod:      "aes-128-gcm",
 		NodeID:            1,
 		Port:              1145,
 		SpeedLimit:        0,
