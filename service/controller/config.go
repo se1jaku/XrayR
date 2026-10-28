@@ -16,7 +16,7 @@ type Config struct {
 	DisableGetRule            bool                             `mapstructure:"DisableGetRule"`
 	EnableProxyProtocol       bool                             `mapstructure:"EnableProxyProtocol"`
 	EnableFallback            bool                             `mapstructure:"EnableFallback"`
-	DisableIVCheck            bool                             `mapstructure:"DisableIVCheck"`
+	DisableIVCheck            bool                             `mapstructure:"DisableIVCheck"` // Deprecated: current Xray no longer supports this setting.
 	DisableSniffing           bool                             `mapstructure:"DisableSniffing"`
 	AutoSpeedLimitConfig      *AutoSpeedLimitConfig            `mapstructure:"AutoSpeedLimitConfig"`
 	GlobalDeviceLimitConfig   *limiter.GlobalDeviceLimitConfig `mapstructure:"GlobalDeviceLimitConfig"`
