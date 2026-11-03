@@ -14,7 +14,6 @@ import (
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/infra/conf"
-	"github.com/xtls/xray-core/proxy/shadowsocks_2022"
 
 	"github.com/XrayR-project/XrayR/api"
 	"github.com/XrayR-project/XrayR/common/mylego"
@@ -109,14 +108,18 @@ func InboundBuilder(config *Config, nodeInfo *api.NodeInfo, tag string) (*core.I
 		isSS2022 := C.Contains(shadowaead_2022.List, cipher)
 		keySize := 32
 		if isSS2022 {
-			method, err := shadowsocks_2022.GetCipherMethod(cipher)
+			if cipher == "2022-blake3-aes-128-gcm" {
+				keySize = 16
+			}
+			key, err := base64.StdEncoding.DecodeString(nodeInfo.ServerKey)
 			if err != nil {
-				return nil, err
+				key = []byte(nodeInfo.ServerKey)
 			}
-			keySize = method.KeySaltLength
-			if _, err := shadowsocks_2022.ParseKey(nodeInfo.ServerKey, keySize); err != nil {
-				return nil, fmt.Errorf("invalid Shadowsocks 2022 server_key for %s: expected %d key bytes (raw or base64-encoded): %w", cipher, keySize, err)
+			if len(key) != keySize {
+				return nil, fmt.Errorf("invalid Shadowsocks 2022 server_key for %s: expected %d key bytes (raw or base64-encoded)", cipher, keySize)
 			}
+			// This core version requires base64-encoded server keys.
+			proxySetting.Password = base64.StdEncoding.EncodeToString(key)
 		}
 		// The placeholder user must have the exact key length required by the cipher.
 		b := make([]byte, keySize)
