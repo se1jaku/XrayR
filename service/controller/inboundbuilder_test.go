@@ -1,6 +1,7 @@
 package controller_test
 
 import (
+	"bytes"
 	"encoding/base64"
 	"strings"
 	"testing"
@@ -8,9 +9,67 @@ import (
 	"github.com/XrayR-project/XrayR/api"
 	"github.com/XrayR-project/XrayR/common/mylego"
 	. "github.com/XrayR-project/XrayR/service/controller"
+	"github.com/xtls/xray-core/app/proxyman"
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/infra/conf"
+	"github.com/xtls/xray-core/transport/internet/reality"
 )
+
+func TestBuildREALITYMinClientVer(t *testing.T) {
+	for _, source := range []string{"panel", "local"} {
+		for _, version := range []string{"", "26.3.27"} {
+			name := version
+			if name == "" {
+				name = "default"
+			}
+			t.Run(source+"/"+name, func(t *testing.T) {
+				privateKey := base64.RawURLEncoding.EncodeToString(make([]byte, 32))
+				config := &Config{}
+				node := &api.NodeInfo{
+					NodeType: "Vless", Port: 1145, TransportProtocol: "tcp",
+				}
+				if source == "panel" {
+					config.DisableLocalREALITYConfig = true
+					node.EnableREALITY = true
+					node.REALITYConfig = &api.REALITYConfig{
+						Dest: "example.com:443", ServerNames: []string{"example.com"},
+						PrivateKey: privateKey, ShortIds: []string{"01020304"}, MinClientVer: version,
+					}
+				} else {
+					config.EnableREALITY = true
+					config.REALITYConfigs = &REALITYConfig{
+						Dest: "example.com:443", ServerNames: []string{"example.com"},
+						PrivateKey: privateKey, ShortIds: []string{"01020304"}, MinClientVer: version,
+					}
+				}
+				inbound, err := InboundBuilder(config, node, "test_reality")
+				if err != nil {
+					t.Fatal(err)
+				}
+				receiver, err := inbound.ReceiverSettings.GetInstance()
+				if err != nil {
+					t.Fatal(err)
+				}
+				stream := receiver.(*proxyman.ReceiverConfig).StreamSettings
+				if len(stream.SecuritySettings) != 1 {
+					t.Fatalf("expected one REALITY configuration, got %d", len(stream.SecuritySettings))
+				}
+				security, err := stream.SecuritySettings[0].GetInstance()
+				if err != nil {
+					t.Fatal(err)
+				}
+				r := security.(*reality.Config)
+				want := []byte{1, 0, 0}
+				if version != "" {
+					want = []byte{26, 3, 27}
+				}
+				if !bytes.Equal(r.MinClientVer, want) {
+					t.Fatalf("expected minimum client version %v, got %v", want, r.MinClientVer)
+				}
+			})
+		}
+	}
+}
 
 func TestBuildSS2022(t *testing.T) {
 	for _, keySize := range []int{16, 32} {
