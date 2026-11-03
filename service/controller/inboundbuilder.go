@@ -213,7 +213,7 @@ func InboundBuilder(config *Config, nodeInfo *api.NodeInfo, tag string) (*core.I
 
 			r := nodeInfo.REALITYConfig
 			streamSetting.REALITYSettings = &conf.REALITYConfig{
-				Show:         config.REALITYConfigs.Show,
+				Show:         config.REALITYConfigs != nil && config.REALITYConfigs.Show,
 				Dest:         []byte(`"` + r.Dest + `"`),
 				Xver:         r.ProxyProtocolVer,
 				ServerNames:  r.ServerNames,
@@ -239,6 +239,11 @@ func InboundBuilder(config *Config, nodeInfo *api.NodeInfo, tag string) (*core.I
 			MaxTimeDiff:  config.REALITYConfigs.MaxTimeDiff,
 			ShortIds:     config.REALITYConfigs.ShortIds,
 		}
+	}
+
+	if isREALITY && streamSetting.REALITYSettings.MinClientVer == "" {
+		// Pass an explicit compatibility floor instead of the core's default.
+		streamSetting.REALITYSettings.MinClientVer = "1.0.0"
 	}
 
 	if !isREALITY && nodeInfo.EnableTLS && config.CertConfig.CertMode != "none" {
